@@ -131,6 +131,7 @@ def untwin_device(device_id):
             f"http://localhost:8080/api/2/things/org.Iotp2c:{device_id}"
             , auth=auth
         )
+        delete_connection(device_id)
         print("Device Untwinned")
 
 
