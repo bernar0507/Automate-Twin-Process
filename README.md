@@ -12,7 +12,9 @@ Automation of the twinning process in Eclipse Ditto
 4. Clone Automate-Twin-Process: ```git clone https://github.com/bernar0507/Automate-Twin-Process.git```
 
 # How to run it:
+
 cd Automate-Twin-Process
+
 python twin_sd.py
 
 # Demo 
