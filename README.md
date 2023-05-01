@@ -26,7 +26,9 @@ Automation of the twinning process in Eclipse Ditto
 `python twin_sd.py`
 
 ### Give the parameters:
+
 Please enter your Device ID: `iwatch`
+
 Please enter your Device Definition: `https://raw.githubusercontent.com/bernar0507/Eclipse-Ditto-MQTT-iWatch/main/iwatch/wot/iwatch.tm.jsonld`
 
 ### It will create the DT
