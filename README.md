@@ -13,17 +13,17 @@ Automation of the twinning process in Eclipse Ditto
 
 # How to run it:
 
-cd Automate-Twin-Process
+`cd Automate-Twin-Process`
 
-python twin_sd.py
+`python twin_sd.py`
 
 # Demo 
 
 ### Run the script 
 
-cd Automate-Twin-Process
+`cd Automate-Twin-Process`
 
-python twin_sd.py
+`python twin_sd.py`
 
 ### Give the parameters:
 Please enter your Device ID: `iwatch`
