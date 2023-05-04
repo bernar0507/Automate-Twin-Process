@@ -29,48 +29,64 @@ def start_ditto():
     os.chdir("..")
     os.chdir("ditto/deployment/docker")
     print("Starting Ditto")
-    subprocess.run(
-        ["docker-compose", "up", "-d"]
-        , stdout=subprocess.DEVNULL
+    running = subprocess.run(
+        ["docker-compose", "ps", "-q", "ditto"]
+        , stdout=subprocess.PIPE
         , stderr=subprocess.DEVNULL
     )
-    print("Ditto started")
+    if not running.stdout:
+        subprocess.run(
+            ["docker-compose", "up", "-d"]
+            , stdout=subprocess.DEVNULL
+            , stderr=subprocess.DEVNULL
+        )
+        print("Ditto started")
+    else:
+        print("Ditto already running")
     os.chdir("../../..")
 
 
 def start_mosquitto():
     """Start Mosquitto"""
     os.chdir("Eclipse-Ditto-MQTT-iWatch")
-    subprocess.run(
-        ["docker", "stop", "mosquitto"]
-        , stdout=subprocess.DEVNULL
+    running = subprocess.run(
+        ["docker", "ps", "-q", "--filter", "name=mosquitto"]
+        , stdout=subprocess.PIPE
         , stderr=subprocess.DEVNULL
     )
-    subprocess.run(
-        ["docker", "rm", "mosquitto"]
+    if not running.stdout:
+        subprocess.run(
+            ["docker", "stop", "mosquitto"]
+            , stdout=subprocess.DEVNULL
+            , stderr=subprocess.DEVNULL
+        )
+        subprocess.run(
+            ["docker", "rm", "mosquitto"]
+            , stdout=subprocess.DEVNULL
+            , stderr=subprocess.DEVNULL
+        )
+        print("Starting Mosquitto")
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--name",
+                "mosquitto",
+                "--network",
+                "docker_default",
+                "-p",
+                "1883:1883",
+                "-v",
+                f"{os.getcwd()}/mosquitto:/mosquitto/",
+                "eclipse-mosquitto",
+            ]
         , stdout=subprocess.DEVNULL
         , stderr=subprocess.DEVNULL
-    )
-    print("Starting Mosquitto")
-    subprocess.run(
-        [
-            "docker",
-            "run",
-            "-d",
-            "--name",
-            "mosquitto",
-            "--network",
-            "docker_default",
-            "-p",
-            "1883:1883",
-            "-v",
-            f"{os.getcwd()}/mosquitto:/mosquitto/",
-            "eclipse-mosquitto",
-        ]
-    , stdout=subprocess.DEVNULL
-    , stderr=subprocess.DEVNULL
-    )
-    print("Mosquitto started")
+        )
+        print("Mosquitto started")
+    else:
+        print("Mosquitto already running")
     os.chdir("..")
 
 
