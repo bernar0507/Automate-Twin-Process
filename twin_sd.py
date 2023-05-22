@@ -27,7 +27,12 @@ def wait_for_ditto(retries=20, delay=5):
 def start_ditto():
     """Start Ditto"""
     os.chdir("..")
-    os.chdir("ditto/deployment/docker")
+    os.chdir("ditto/")
+    subprocess.run(["git", "checkout", "tags/3.0.0"]
+        , stdout=subprocess.PIPE
+        , stderr=subprocess.DEVNULL
+    )
+    os.chdir("deployment/docker")
     print("Starting Ditto")
     running = subprocess.run(
         ["docker-compose", "ps", "-q", "ditto"]
