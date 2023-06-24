@@ -96,9 +96,7 @@ def start_mosquitto():
     else:
         print("Mosquitto already running")
     os.chdir("..")
-
-
-import time
+    
 
 def create_ssl_certificates_ca_broker():
     print("Creating SSL Certificates")
