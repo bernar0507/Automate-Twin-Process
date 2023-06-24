@@ -55,39 +55,42 @@ def start_mosquitto():
     """Start Mosquitto"""
     os.chdir("Eclipse-Ditto-MQTT-iWatch")
     running = subprocess.run(
-        ["docker", "ps", "-q", "--filter", "name=mosquitto"]
-        , stdout=subprocess.PIPE
-        , stderr=subprocess.DEVNULL
+        ["docker", "ps", "-q", "--filter", "name=mosquitto"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
     )
     if not running.stdout:
         subprocess.run(
-            ["docker", "stop", "mosquitto"]
-            , stdout=subprocess.DEVNULL
-            , stderr=subprocess.DEVNULL
+            ["docker", "stop", "mosquitto"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         subprocess.run(
-            ["docker", "rm", "mosquitto"]
-            , stdout=subprocess.DEVNULL
-            , stderr=subprocess.DEVNULL
+            ["docker", "rm", "mosquitto"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         print("Starting Mosquitto")
         subprocess.run(
             [
                 "docker",
                 "run",
-                "-d",
+                "-it",
                 "--name",
                 "mosquitto",
                 "--network",
                 "docker_default",
                 "-p",
-                "1883:1883",
+                "8883:8883",
                 "-v",
                 f"{os.getcwd()}/mosquitto:/mosquitto/",
                 "eclipse-mosquitto",
-            ]
-        , stdout=subprocess.DEVNULL
-        , stderr=subprocess.DEVNULL
+                "mosquitto",
+                "-c",
+                "/mosquitto/config/mosquitto.conf",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         print("Mosquitto started")
     else:
