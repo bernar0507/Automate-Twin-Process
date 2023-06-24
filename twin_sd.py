@@ -98,6 +98,65 @@ def start_mosquitto():
     os.chdir("..")
 
 
+import time
+
+def create_ssl_certificates_ca_broker():
+    print("Creating SSL Certificates")
+
+    # Define variables
+    env = {
+        "COUNTRY": "PT",
+        "STATE": "MAFRA",
+        "CITY": "LISBON",
+        "ORGANIZATION": "My Company",
+        "ORG_UNIT": "IT Department",
+    }
+
+    # Define common name for first certificate
+    common_name = "CA"
+
+    # Step 1-4
+    commands = [
+        "docker exec -it mosquitto bin/sh",
+        "cd mosquitto/conf",
+        "apk add openssl",
+    ]
+
+    # Step 5
+    commands.append(
+        f'openssl req -new -x509 -days 3650 -extensions v3_ca -keyout ca.key -out ca.crt -nodes -subj "/C=${env["COUNTRY"]}/ST=${env["STATE"]}/L=${env["CITY"]}/O=${env["ORGANIZATION"]}/OU=${env["ORG_UNIT"]}/CN={common_name}"'
+    )
+
+    # Step 6
+    commands.append("sh generate_openssl_config.sh")
+
+    # Define common name for second certificate
+    common_name = "MQTT Broker"
+
+    # Step 8
+    commands.append(
+        f'openssl req -new -out server.csr -keyout server.key -nodes -subj "/C=${env["COUNTRY"]}/ST=${env["STATE"]}/L=${env["CITY"]}/O=${env["ORGANIZATION"]}/OU=${env["ORG_UNIT"]}/CN={common_name}" -config openssl.cnf'
+    )
+
+    # Step 9
+    commands.append(
+        "openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650 -extensions v3_req -extfile openssl.cnf"
+    )
+
+    # Record total time
+    start_time = time.time()
+    for cmd in commands:
+        subprocess.run(cmd, shell=True, check=True)
+
+    # Step 10 - exit is not needed as each command runs in a separate subprocess
+
+    # Step 11
+    subprocess.run("docker restart mosquitto", shell=True, check=True)
+
+    end_time = time.time()
+    print(f"SSL Certificates created and Mosquitto restarted in {end_time - start_time} seconds in total")
+
+
 def create_policy():
     """Create Policy"""
     headers = {"Content-Type": "application/json"}
