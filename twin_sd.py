@@ -333,5 +333,6 @@ def twinning_process():
 if __name__ == "__main__":
     start_ditto()
     start_mosquitto()
+    create_ssl_certificates_ca_broker()
     twinning_process()
     check_dt_status("iwatch")
