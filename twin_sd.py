@@ -237,33 +237,40 @@ def create_connection(device_id):
             time.sleep(5)
     # Create connection
     data = {
-        "targetActorSelection": "/system/sharding/connection",
-        "headers": {"aggregate": False},
-        "piggybackCommand": {
-            "type": "connectivity.commands:createConnection",
-            "connection": {
-                "id": f"mqtt-connection-{device_id}",
-                "connectionType": "mqtt",
-                "connectionStatus": "open",
-                "failoverEnabled": True,
-                "uri": f"tcp://ditto:ditto@{mosquitto_ip}:1883",
-                "sources": [
-                    {
-                        "addresses": [f"org.Iotp2c:{device_id}/things/twin/commands/modify"],
-                        "authorizationContext": ["nginx:ditto"],
-                        "qos": 0,
-                        "filters": []
-                    }
-                ],
-                "targets": [
-                    {
-                        "address": f"org.Iotp2c:{device_id}/things/twin/events/modified",
-                        "topics": [
-                            "_/_/things/twin/events",
-                            "_/_/things/live/messages"
-                        ],
-                        "authorizationContext": ["nginx:ditto"],
-                        "qos": 0
+    "targetActorSelection": "/system/sharding/connection",
+    "headers": {"aggregate": False},
+    "piggybackCommand": {
+        "type": "connectivity.commands:createConnection",
+        "connection": {
+            "id": f"mqtt-connection-{device_id}",
+            "connectionType": "mqtt",
+            "connectionStatus": "open",
+            "failoverEnabled": True,
+            "uri": f"ssl://ditto:ditto@{mosquitto_ip}:8883",
+            "validateCertificates": True,
+            "ca": f"-----BEGIN CERTIFICATE-----\n{CA_CERT}\n-----END CERTIFICATE-----",
+            "credentials": {
+                "type": "client-cert",
+                "cert": f"-----BEGIN CERTIFICATE-----\n{CLIENT_CERT}\n-----END CERTIFICATE-----",
+                "key": f"-----BEGIN PRIVATE KEY-----\n{CLIENT_KEY}\n-----END PRIVATE KEY-----"
+            },
+            "sources": [
+                {
+                    "addresses": [f"org.Iotp2c:{device_id}/things/twin/commands/modify"],
+                    "authorizationContext": ["nginx:ditto"],
+                    "qos": 0,
+                    "filters": []
+                }
+            ],
+            "targets": [
+                {
+                    "address": f"org.Iotp2c:{device_id}/things/twin/events/modified",
+                    "topics": [
+                        "_/_/things/twin/events",
+                        "_/_/things/live/messages"
+                    ],
+                    "authorizationContext": ["nginx:ditto"],
+                    "qos": 0
                     }
                 ]
             }
