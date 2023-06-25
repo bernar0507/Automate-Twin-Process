@@ -216,6 +216,13 @@ def untwin_device(device_id):
         print("Device Untwinned")
 
 
+def read_and_format_cert(filepath, start_marker, end_marker):
+    with open(filepath, 'r') as file:
+        content = file.read()
+        # Strip the markers and any leading/trailing whitespace or newlines
+        return content.replace(start_marker, "").replace(end_marker, "").strip()
+
+
 def create_connection(device_id):
     """Create the connection"""
     # Create the connection to the device
@@ -236,6 +243,9 @@ def create_connection(device_id):
             print("Waiting for Mosquitto container to start...")
             time.sleep(5)
     # Create connection
+    CA_CERT = read_and_format_cert('ca_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
+    CLIENT_CERT = read_and_format_cert('client_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
+    CLIENT_KEY = read_and_format_cert('client_key_path', "-----BEGIN PRIVATE KEY----- ", " -----END PRIVATE KEY-----")
     data = {
     "targetActorSelection": "/system/sharding/connection",
     "headers": {"aggregate": False},
