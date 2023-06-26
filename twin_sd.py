@@ -369,6 +369,24 @@ def check_dt_status(device_id):
         return None
 
 
+def send_iwatch_data():
+    container_name = "iwatch-container"  # Replace with your container name
+    container_folder = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/iwatch"
+    script_path = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/iwatch/send_data_iwatch.py"
+    
+    # Enter the Docker container
+    enter_container_cmd = f"docker exec -it {container_name} bash"
+    subprocess.run(enter_container_cmd, shell=True)
+    
+    # Navigate to the specified folder
+    navigate_cmd = f"cd {container_folder}"
+    subprocess.run(navigate_cmd, shell=True)
+    
+    # Execute the script using Python 3
+    execute_cmd = f"python3 {script_path}"
+    subprocess.run(execute_cmd, shell=True)
+    
+
 def twinning_process():
     """Twin device, policy and connection"""
     if not wait_for_ditto():
@@ -384,7 +402,7 @@ def twinning_process():
         create_policy()
         twin_device(device_id, definition)
         create_connection(device_id)
-    
+
 
 if __name__ == "__main__":
     start_ditto()
@@ -392,3 +410,4 @@ if __name__ == "__main__":
     create_ssl_certificates_ca_broker()
     twinning_process()
     check_dt_status("iwatch")
+    send_iwatch_data()
