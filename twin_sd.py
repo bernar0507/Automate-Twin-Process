@@ -155,6 +155,44 @@ def create_ssl_certificates_ca_broker():
     print(f"SSL Certificates created and Mosquitto restarted in {end_time - start_time} seconds in total")
 
 
+def exec_and_get_output(container_name, command):
+    result = subprocess.run(
+        ["docker", "exec", "-it", container_name, "cat", command], 
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    return result.stdout.decode()
+
+
+def sign_certificate():
+    # define commands to get CA cert, CA key, client cert, and client key
+    ca_cert_cmd = "/app/mosquitto/conf/ca.crt"
+    ca_key_cmd = "/app/mosquitto/conf/ca.key"
+    client_csr_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.csr"
+    client_key_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.key"
+    
+    # get contents of CA cert, CA key, client cert, and client key
+    CA_CERT = exec_and_get_output("mosquitto", ca_cert_cmd)
+    CA_KEY = exec_and_get_output("mosquitto", ca_key_cmd)
+    CLIENT_CSR = exec_and_get_output("iwatch-container", client_csr_cmd)
+    CLIENT_KEY = exec_and_get_output("iwatch-container", client_key_cmd)
+
+    # create and sign the client certificate
+    openssl_command = f"openssl x509 -req -in {CLIENT_CSR} -CA {CA_CERT} -CAkey {CA_KEY} -CAcreateserial -out client.crt -days 3650 -extensions v3_req -extfile openssl.cnf"
+    subprocess.run(["docker", "exec", "-it", "iwatch-container", openssl_command], check=True)
+
+    # get the client certificate
+    client_crt_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.crt"
+    CLIENT_CERT = exec_and_get_output("iwatch-container", client_crt_cmd)
+
+    # trim the keys and certificate
+    CLIENT_CERT = CLIENT_CERT.replace("-----BEGIN CERTIFICATE-----\n", "").replace("\n-----END CERTIFICATE-----", "") 
+    CLIENT_KEY = CLIENT_KEY.replace("-----BEGIN PRIVATE KEY-----\n", "").replace("\n-----END PRIVATE KEY-----", "")
+    CA_CERT = CA_CERT.replace("-----BEGIN CERTIFICATE-----\n", "").replace("\n-----END CERTIFICATE-----", "")
+    
+    return CA_CERT, CLIENT_CERT, CLIENT_KEY
+
+
 def create_policy():
     """Create Policy"""
     headers = {"Content-Type": "application/json"}
@@ -215,13 +253,13 @@ def untwin_device(device_id):
         delete_connection(device_id)
         print("Device Untwinned")
 
-
+"""
 def read_and_format_cert(filepath, start_marker, end_marker):
     with open(filepath, 'r') as file:
         content = file.read()
         # Strip the markers and any leading/trailing whitespace or newlines
         return content.replace(start_marker, "").replace(end_marker, "").strip()
-
+"""
 
 def create_connection(device_id):
     """Create the connection"""
@@ -243,9 +281,10 @@ def create_connection(device_id):
             print("Waiting for Mosquitto container to start...")
             time.sleep(5)
     # Create connection
-    CA_CERT = read_and_format_cert('ca_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
-    CLIENT_CERT = read_and_format_cert('client_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
-    CLIENT_KEY = read_and_format_cert('client_key_path', "-----BEGIN PRIVATE KEY----- ", " -----END PRIVATE KEY-----")
+    CA_CERT, CLIENT_CERT, CLIENT_KEY = sign_certificate()
+    #CA_CERT = read_and_format_cert('ca_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
+    #CLIENT_CERT = read_and_format_cert('client_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
+    #CLIENT_KEY = read_and_format_cert('client_key_path', "-----BEGIN PRIVATE KEY----- ", " -----END PRIVATE KEY-----")
     data = {
     "targetActorSelection": "/system/sharding/connection",
     "headers": {"aggregate": False},
