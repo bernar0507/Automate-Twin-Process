@@ -40,12 +40,15 @@ def start_ditto():
         , stderr=subprocess.DEVNULL
     )
     if not running.stdout:
+        start_time = time.time()
         subprocess.run(
             ["docker-compose", "up", "-d"]
             , stdout=subprocess.DEVNULL
             , stderr=subprocess.DEVNULL
         )
-        print("Ditto started")
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print(f"Ditto started in {time_taken} seconds")
     else:
         print("Ditto already running")
     os.chdir("../../..")
@@ -53,7 +56,7 @@ def start_ditto():
 
 def start_mosquitto():
     """Start Mosquitto"""
-    os.chdir("Eclipse-Ditto-MQTT-iWatch")
+    os.chdir("Eclipse-Ditto-MQTT-iWatch-SSL")
     running = subprocess.run(
         ["docker", "ps", "-q", "--filter", "name=mosquitto"],
         stdout=subprocess.PIPE,
@@ -71,11 +74,12 @@ def start_mosquitto():
             stderr=subprocess.DEVNULL
         )
         print("Starting Mosquitto")
+        start_time = time.time()
         subprocess.run(
             [
                 "docker",
                 "run",
-                "-it",
+                "-d",
                 "--name",
                 "mosquitto",
                 "--network",
@@ -92,13 +96,21 @@ def start_mosquitto():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        print("Mosquitto started")
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print(f"Mosquitto started in {time_taken} seconds")
+
+        # Get container logs
+        print("Getting Mosquitto container logs...")
+        logs = subprocess.run(["docker", "logs", "mosquitto"], stdout=subprocess.PIPE, text=True)
+        print(logs.stdout)
     else:
         print("Mosquitto already running")
     os.chdir("..")
     
 
 def create_ssl_certificates_ca_broker():
+    """Create the certificates for the CA and Broker/server"""
     print("Creating SSL Certificates")
 
     # Define variables
@@ -112,43 +124,31 @@ def create_ssl_certificates_ca_broker():
 
     # Define common name for first certificate
     common_name = "CA"
+    
+    running = subprocess.run(
+        ["docker", "ps", "-q", "--filter", "name=mosquitto"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
 
-    # Step 1-4
+    # Define commands
     commands = [
-        "docker exec -it mosquitto bin/sh",
-        "cd mosquitto/conf",
-        "apk add openssl",
-    ]
-
-    # Step 5
-    commands.append(
-        f'openssl req -new -x509 -days 3650 -extensions v3_ca -keyout ca.key -out ca.crt -nodes -subj "/C=${env["COUNTRY"]}/ST=${env["STATE"]}/L=${env["CITY"]}/O=${env["ORGANIZATION"]}/OU=${env["ORG_UNIT"]}/CN={common_name}"'
-    )
-
-    # Step 6
-    commands.append("sh generate_openssl_config.sh")
-
-    # Define common name for second certificate
-    common_name = "MQTT Broker"
-
-    # Step 8
-    commands.append(
-        f'openssl req -new -out server.csr -keyout server.key -nodes -subj "/C=${env["COUNTRY"]}/ST=${env["STATE"]}/L=${env["CITY"]}/O=${env["ORGANIZATION"]}/OU=${env["ORG_UNIT"]}/CN={common_name}" -config openssl.cnf'
-    )
-
-    # Step 9
-    commands.append(
+        "docker exec mosquitto sh -c '"
+        "cd /mosquitto/config && "
+        "apk add openssl && "
+        f'openssl req -new -x509 -days 3650 -extensions v3_ca -keyout ca.key -out ca.crt -nodes -subj "/C={env["COUNTRY"]}/ST={env["STATE"]}/L={env["CITY"]}/O={env["ORGANIZATION"]}/OU={env["ORG_UNIT"]}/CN={common_name}" && '
+        "sh generate_openssl_config.sh && "
+        f'openssl req -new -out server.csr -keyout server.key -nodes -subj "/C={env["COUNTRY"]}/ST={env["STATE"]}/L={env["CITY"]}/O={env["ORGANIZATION"]}/OU={env["ORG_UNIT"]}/CN=MQTT Broker" -config openssl.cnf && '
         "openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650 -extensions v3_req -extfile openssl.cnf"
-    )
+        "'"
+    ]
 
     # Record total time
     start_time = time.time()
     for cmd in commands:
         subprocess.run(cmd, shell=True, check=True)
 
-    # Step 10 - exit is not needed as each command runs in a separate subprocess
-
-    # Step 11
+    # Restart the mosquitto container
     subprocess.run("docker restart mosquitto", shell=True, check=True)
 
     end_time = time.time()
@@ -156,45 +156,46 @@ def create_ssl_certificates_ca_broker():
 
 
 def exec_and_get_output(container_name, command):
+    """Cat a file in a container"""
     result = subprocess.run(
-        ["docker", "exec", "-it", container_name, "cat", command], 
+        ["docker", "exec", "-i", container_name, "cat", command], 
         stdout=subprocess.PIPE,
         check=True,
     )
     return result.stdout.decode()
 
 
-def sign_certificate():
-    # define commands to get CA cert, CA key, client cert, and client key
-    ca_cert_cmd = "/app/mosquitto/conf/ca.crt"
-    ca_key_cmd = "/app/mosquitto/conf/ca.key"
-    client_csr_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.csr"
-    client_key_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.key"
+def format_strings_for_connection(string, start_marker, end_marker):
+    string = string.replace(start_marker, "").replace(end_marker, "").replace("\n", " ").strip()
+    return string
     
-    # get contents of CA cert, CA key, client cert, and client key
-    CA_CERT = exec_and_get_output("mosquitto", ca_cert_cmd)
-    CA_KEY = exec_and_get_output("mosquitto", ca_key_cmd)
-    CLIENT_CSR = exec_and_get_output("iwatch-container", client_csr_cmd)
-    CLIENT_KEY = exec_and_get_output("iwatch-container", client_key_cmd)
 
+def sign_certificate():
+    """Sign certificate of the client"""
+    start_time = time.time()
+    # define commands to get CA cert, CA key, client cert, and client key
+    ca_cert_cmd = "/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/ca.crt"
+    client_key_cmd = "/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/client.key"
+    client_crt_cmd = "/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/client.crt"
+    
     # create and sign the client certificate
-    openssl_command = f"openssl x509 -req -in {CLIENT_CSR} -CA {CA_CERT} -CAkey {CA_KEY} -CAcreateserial -out client.crt -days 3650 -extensions v3_req -extfile openssl.cnf"
-    subprocess.run(["docker", "exec", "-it", "iwatch-container", openssl_command], check=True)
-
-    # get the client certificate
-    client_crt_cmd = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/mosquitto/conf/client.crt"
-    CLIENT_CERT = exec_and_get_output("iwatch-container", client_crt_cmd)
+    openssl_command = "openssl x509 -req -in '/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/client.csr' -CA '/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/ca.crt' -CAkey '/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/ca.key' -CAcreateserial -out '/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/client.crt' -days 3650 -extensions v3_req -extfile '/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/config/openssl.cnf'"
+    process = subprocess.run(["docker", "exec", "-i", "iwatch-container", "/bin/sh", "-c", openssl_command], stdout=subprocess.PIPE,check=True,)
+    result = process.stdout.decode()
 
     # trim the keys and certificate
-    CLIENT_CERT = CLIENT_CERT.replace("-----BEGIN CERTIFICATE-----\n", "").replace("\n-----END CERTIFICATE-----", "") 
-    CLIENT_KEY = CLIENT_KEY.replace("-----BEGIN PRIVATE KEY-----\n", "").replace("\n-----END PRIVATE KEY-----", "")
-    CA_CERT = CA_CERT.replace("-----BEGIN CERTIFICATE-----\n", "").replace("\n-----END CERTIFICATE-----", "")
+    CA_CERT = format_strings_for_connection(exec_and_get_output("iwatch-container", ca_cert_cmd), "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----")
+    CLIENT_CERT = format_strings_for_connection(exec_and_get_output("iwatch-container", client_crt_cmd), "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----")
+    CLIENT_KEY = format_strings_for_connection(exec_and_get_output("iwatch-container", client_key_cmd), "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----")
+    end_time = time.time()
+    print(f"Signing certificate process took {end_time - start_time} seconds")
     
     return CA_CERT, CLIENT_CERT, CLIENT_KEY
 
 
 def create_policy():
     """Create Policy"""
+    start_time = time.time()
     headers = {"Content-Type": "application/json"}
     auth = ("ditto", "ditto")
     data = {
@@ -216,11 +217,13 @@ def create_policy():
         , json=data,
     )
     if response.status_code == 201 or response.status_code == 200:
-        print("DT policy created with sucess")
+        end_time = time.time()
+        print(f"DT policy created with sucess and took {end_time - start_time} seconds")
 
 
 def twin_device(device_id, definition):
     """ Create the DT"""
+    start_time = time.time()
     auth = ("ditto", "ditto")
     headers = {"Content-Type": "application/json"}
     data = {
@@ -234,11 +237,13 @@ def twin_device(device_id, definition):
         , json=data,
     )
     if response.status_code == 201 or response.status_code == 200:
-        print("DT created with sucess")
+        end_time = time.time()
+        print(f"DT created with sucess and took {end_time - start_time} seconds")
 
 
 def untwin_device(device_id):
     """Untwin a device"""
+    start_time = time.time()
     auth = ("ditto", "ditto")
     response = requests.delete(
         f"http://localhost:8080/api/2/things/org.Iotp2c:{device_id}"
@@ -251,40 +256,33 @@ def untwin_device(device_id):
             , auth=auth
         )
         delete_connection(device_id)
-        print("Device Untwinned")
+        end_time = time.time()
+        print(f"Device Untwinned and took {end_time - start_time} seconds")
 
-"""
-def read_and_format_cert(filepath, start_marker, end_marker):
-    with open(filepath, 'r') as file:
-        content = file.read()
-        # Strip the markers and any leading/trailing whitespace or newlines
-        return content.replace(start_marker, "").replace(end_marker, "").strip()
-"""
 
 def create_connection(device_id):
     """Create the connection"""
+    start_time = time.time()
     # Create the connection to the device
     headers = {"Content-Type": "application/json"}
     mosquitto_ip = ""
     while not mosquitto_ip:
         try:
-            mosquitto_ip = subprocess.check_output(
+            mosquitto_ip = subprocess.run(
                 [
                     "docker",
                     "inspect",
                     "-f",
                     "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
                     "mosquitto",
-                ]
-            ).decode("utf-8").strip()
+                ],capture_output=True,
+                text=True,
+            ).stdout.strip()
         except subprocess.CalledProcessError:
             print("Waiting for Mosquitto container to start...")
             time.sleep(5)
     # Create connection
     CA_CERT, CLIENT_CERT, CLIENT_KEY = sign_certificate()
-    #CA_CERT = read_and_format_cert('ca_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
-    #CLIENT_CERT = read_and_format_cert('client_cert_path', "-----BEGIN CERTIFICATE----- ", " -----END CERTIFICATE-----")
-    #CLIENT_KEY = read_and_format_cert('client_key_path', "-----BEGIN PRIVATE KEY----- ", " -----END PRIVATE KEY-----")
     data = {
     "targetActorSelection": "/system/sharding/connection",
     "headers": {"aggregate": False},
@@ -315,8 +313,8 @@ def create_connection(device_id):
                 {
                     "address": f"org.Iotp2c:{device_id}/things/twin/events/modified",
                     "topics": [
-                        "_/_/things/twin/events",
-                        "_/_/things/live/messages"
+                        "//things/twin/events",
+                        "//things/live/messages"
                     ],
                     "authorizationContext": ["nginx:ditto"],
                     "qos": 0
@@ -332,7 +330,8 @@ def create_connection(device_id):
         json=data,
     )
     if response.status_code == 200:
-        print("Connection created with sucess")
+        end_time = time.time()
+        print(f"Connection created with sucess and took {end_time - start_time} seconds")
 
 
 def delete_connection(device_id):
@@ -353,7 +352,7 @@ def delete_connection(device_id):
         json=data,
     )
     if response.status_code == 200:
-        print("Connection deleted with sucess")
+        print(f"Connection deleted with sucess and took {end_time - start_time} seconds")
 
 
 def check_dt_status(device_id):
@@ -371,24 +370,16 @@ def check_dt_status(device_id):
 
 def send_iwatch_data():
     container_name = "iwatch-container"  # Replace with your container name
-    container_folder = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/iwatch"
-    script_path = "/app/Eclipse-Ditto-MQTT-iWatch-SSL/iwatch/send_data_iwatch.py"
+    script_path = "/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/iwatch/send_data_iwatch.py"
     
     # Enter the Docker container
-    enter_container_cmd = f"docker exec -it {container_name} bash"
-    subprocess.run(enter_container_cmd, shell=True)
-    
-    # Navigate to the specified folder
-    navigate_cmd = f"cd {container_folder}"
-    subprocess.run(navigate_cmd, shell=True)
-    
-    # Execute the script using Python 3
-    execute_cmd = f"python3 {script_path}"
-    subprocess.run(execute_cmd, shell=True)
+    enter_container_cmd = ["docker", "exec", "-d", container_name, "/bin/sh", "-c", f"python3 {script_path}"]
+    subprocess.run(enter_container_cmd, stdout=subprocess.PIPE, check=True)
     
 
 def twinning_process():
     """Twin device, policy and connection"""
+    start_time = time.time()
     if not wait_for_ditto():
         return
     device_id = input("Please enter your Device ID: ")
@@ -402,6 +393,8 @@ def twinning_process():
         create_policy()
         twin_device(device_id, definition)
         create_connection(device_id)
+        end_time = time.time()
+        print(f"Twinning process took {end_time - start_time} seconds")
 
 
 if __name__ == "__main__":
