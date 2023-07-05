@@ -13,6 +13,8 @@ Automation of the twinning process in Eclipse Ditto
 
 5. Install the requirements: ```sh install_requirements.sh```
 
+6. Build the sd image: ```docker build --no-cache  -t iwatch_image -f Dockerfile.iwatch .```
+
 # How to run it:
 
 `cd Automate-Twin-Process`
