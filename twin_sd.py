@@ -68,61 +68,6 @@ def start_ditto():
     os.chdir("../../..")
 
 
-def start_mosquitto():
-    """Start Mosquitto"""
-    os.chdir("Eclipse-Ditto-MQTT-iWatch-SSL")
-    running = subprocess.run(
-        ["docker", "ps", "-q", "--filter", "name=mosquitto"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL
-    )
-    if not running.stdout:
-        subprocess.run(
-            ["docker", "stop", "mosquitto"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        subprocess.run(
-            ["docker", "rm", "mosquitto"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        print("Starting Mosquitto")
-        start_time = time.time()
-        subprocess.run(
-            [
-                "docker",
-                "run",
-                "-d",
-                "--name",
-                "mosquitto",
-                "--network",
-                "docker_default",
-                "-p",
-                "8883:8883",
-                "-v",
-                f"{os.getcwd()}/mosquitto:/mosquitto/",
-                "eclipse-mosquitto",
-                "mosquitto",
-                "-c",
-                "/mosquitto/config/mosquitto.conf",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('timing_data.csv', "Mosquitto start", time_taken)
-
-        # Get container logs
-        print("Getting Mosquitto container logs...")
-        logs = subprocess.run(["docker", "logs", "mosquitto"], stdout=subprocess.PIPE, text=True)
-        print(logs.stdout)
-    else:
-        print("Mosquitto already running")
-    os.chdir("..")
-    
-
 def create_ssl_certificates_ca_broker():
     """Create the certificates for the CA and Broker/server"""
     print("Creating SSL Certificates")
@@ -163,11 +108,94 @@ def create_ssl_certificates_ca_broker():
         subprocess.run(cmd, shell=True, check=True)
 
     # Restart the mosquitto container
-    subprocess.run("docker restart mosquitto", shell=True, check=True)
+    subprocess.run(
+        ["docker", "stop", "mosquitto"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    subprocess.run(
+        ["docker", "rm", "mosquitto"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    subprocess.run(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--name",
+                "mosquitto",
+                "--network",
+                "docker_default",
+                "-p",
+                "8883:8883",
+                "-v",
+                f"{os.getcwd()}/mosquitto:/mosquitto/",
+                "eclipse-mosquitto",
+                "mosquitto",
+                "-c",
+                "/mosquitto/config/mosquitto.conf",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
 
     end_time = time.time()
     time_taken = end_time - start_time
     write_to_csv('timing_data.csv', "SSL certs & Mosquitto restart", time_taken)
+    
+
+def start_mosquitto():
+    """Start Mosquitto"""
+    os.chdir("Eclipse-Ditto-MQTT-iWatch-SSL")
+    running = subprocess.run(
+        ["docker", "ps", "-q", "--filter", "name=mosquitto"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
+    if not running.stdout:
+        subprocess.run(
+            ["docker", "stop", "mosquitto"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        subprocess.run(
+            ["docker", "rm", "mosquitto"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print("Starting Mosquitto")
+        start_time = time.time()
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--name",
+                "mosquitto",
+                "--network",
+                "docker_default",
+                "-p",
+                "8883:8883",
+                "-v",
+                f"{os.getcwd()}/mosquitto:/mosquitto/",
+                "eclipse-mosquitto",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        create_ssl_certificates_ca_broker()
+        end_time = time.time()
+        time_taken = end_time - start_time
+        write_to_csv('timing_data.csv', "Mosquitto start", time_taken)
+
+        # Get container logs
+        print("Getting Mosquitto container logs...")
+        logs = subprocess.run(["docker", "logs", "mosquitto"], stdout=subprocess.PIPE, text=True)
+        print(logs.stdout)
+    else:
+        print("Mosquitto already running")
+    os.chdir("..")
 
 
 def run_sd(device_id):
@@ -448,7 +476,7 @@ if __name__ == "__main__":
     definition = input("Please enter your Device Definition: ")
     start_ditto()
     start_mosquitto()
-    create_ssl_certificates_ca_broker()
+    #create_ssl_certificates_ca_broker()
     run_sd(device_id)
     twinning_process(device_id, definition)
     check_dt_status(device_id)
