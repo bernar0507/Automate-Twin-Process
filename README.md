@@ -11,6 +11,10 @@ Automation of the twinning process in Eclipse Ditto
 
 4. Clone Automate-Twin-Process: ```git clone https://github.com/bernar0507/Automate-Twin-Process.git```
 
+5. Install the requirements: ```sh install_requirements.sh```
+
+6. Build the sd image: ```docker build --no-cache  -t iwatch_image -f Dockerfile.iwatch .```
+
 # How to run it:
 
 `cd Automate-Twin-Process`
@@ -49,11 +53,7 @@ Please enter your Device Definition: `https://raw.githubusercontent.com/bernar05
 
 ### To simulate sending data from smart device
 
-`cd Eclipse-Ditto-MQTT-iWatch/iwatch/dockerfile`
-
-`docker build --no-cache  -t iwatch_image -f Dockerfile.iwatch .`
-
-`docker run -it --name iwatch-container --network docker_default iwatch_image`
+The sd will start sending data automatically.
 
 # Check the Twin
 
