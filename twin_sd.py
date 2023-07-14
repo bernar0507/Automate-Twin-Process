@@ -215,7 +215,7 @@ def run_sd(device_id):
         "-it", 
         "-d", 
         "--name", 
-        f"{device_id}-container", 
+        f"iwatch-container", 
         "-v", 
         "/home/ditto/project2/Eclipse-Ditto-MQTT-iwatch-SSL-TCP/mosquitto/:/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/",
         "--network", 
