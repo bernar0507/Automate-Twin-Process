@@ -269,6 +269,15 @@ def sign_certificate(device_id):
     """Sign certificate of the client"""
     start_time = time.time()
     
+    env = {
+        "COUNTRY": "PT",
+        "STATE": "MAFRA",
+        "CITY": "LISBON",
+        "ORGANIZATION": "My Company",
+        "ORG_UNIT": "IT Department",
+        "COMMON_NAME": f"{device_id} client"
+    }
+    
     # define commands to get CA cert, CA key, client cert, and client key
     ca_cert_cmd = "/device/mosquitto/config/ca.crt"
     client_key_cmd = "/device/mosquitto/config/client.key"
@@ -280,7 +289,7 @@ def sign_certificate(device_id):
     "cd .. && "
     "cd /device/mosquitto/config && "
     "sh generate_openssl_config_client.sh && "
-    'openssl req -new -out client.csr -keyout client.key -nodes -subj "/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}" -config openssl.cnf && '
+    f'openssl req -new -out client.csr -keyout client.key -nodes -subj "/C={env["COUNTRY"]}/ST={env["STATE"]}/L={env["CITY"]}/O={env["ORGANIZATION"]}/OU={env["ORG_UNIT"]}/CN={env["COMMON_NAME"]}" -config openssl.cnf && '
     "openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 3650 -extensions v3_req -extfile openssl.cnf"
     "'"
     ]
