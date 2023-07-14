@@ -6,6 +6,7 @@ from getpass import getpass
 import requests
 import datetime
 import csv
+import re
 
 
 def write_to_csv(file_name, time_taken, event_name):
@@ -208,6 +209,7 @@ def start_mosquitto():
 def run_sd(device_id):
     """Start the smart device container."""
     print(f"Starting {device_id} container...")
+    base_device_name = re.split('\d', device_id)[0]
 
     cmd = [
         "docker", 
@@ -220,7 +222,7 @@ def run_sd(device_id):
         "/home/ditto/project2/Eclipse-Ditto-MQTT-iwatch-SSL-TCP/mosquitto/:/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/",
         "--network", 
         "docker_default", 
-        f"iwatch_image"
+        f"{base_device_name}_image"
     ]
     
     
