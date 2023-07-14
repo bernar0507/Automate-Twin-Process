@@ -24,7 +24,6 @@ def write_to_csv(file_name, time_taken, event_name):
 
 def wait_for_ditto(retries=20, delay=5):
     """Wait for Ditto API to start"""
-    start_time = time.time()
     api_url = "http://localhost:8080/api/2/things"
     auth = ("ditto", "ditto")
     for _ in range(retries):
@@ -32,9 +31,6 @@ def wait_for_ditto(retries=20, delay=5):
             response = requests.get(api_url, auth=auth)
             if response.status_code == 200:
                 print("Ditto API is ready.")
-                end_time = time.time()
-                time_taken = end_time - start_time
-                write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Ditto API start", time_taken)
                 return True
         except requests.exceptions.RequestException:
             pass
@@ -60,15 +56,11 @@ def start_ditto():
         , stderr=subprocess.DEVNULL
     )
     if not running.stdout:
-        start_time = time.time()
         subprocess.run(
             ["docker-compose", "up", "-d"]
             , stdout=subprocess.DEVNULL
             , stderr=subprocess.DEVNULL
         )
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Ditto start", time_taken)
     else:
         print("Ditto already running")
     os.chdir("../../..")
@@ -181,7 +173,6 @@ def start_mosquitto():
         )
         time.sleep(5)
         print("Starting Mosquitto")
-        start_time = time.time()
         subprocess.run(
             [
                 "docker",
@@ -204,9 +195,6 @@ def start_mosquitto():
             stderr=subprocess.DEVNULL
         )
         create_ssl_certificates_broker()  
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Mosquitto start", time_taken)
 
         # Get container logs
         print("Getting Mosquitto container logs...")
@@ -267,7 +255,6 @@ def get_container_id(container_name):
 
 def sign_certificate(device_id):
     """Sign certificate of the client"""
-    start_time = time.time()
     
     env = {
         "COUNTRY": "PT",
@@ -302,16 +289,12 @@ def sign_certificate(device_id):
     CA_CERT = format_strings_for_connection(exec_and_get_output(f"{device_id}-container", ca_cert_cmd), "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----")
     CLIENT_CERT = format_strings_for_connection(exec_and_get_output(f"{device_id}-container", client_crt_cmd), "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----")
     CLIENT_KEY = format_strings_for_connection(exec_and_get_output(f"{device_id}-container", client_key_cmd), "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----")
-    end_time = time.time()
-    time_taken = end_time - start_time
-    write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Sign client cert", time_taken)
     
     return CA_CERT, CLIENT_CERT, CLIENT_KEY
 
 
 def create_policy():
     """Create Policy"""
-    start_time = time.time()
     headers = {"Content-Type": "application/json"}
     auth = ("ditto", "ditto")
     data = {
@@ -333,14 +316,11 @@ def create_policy():
         , json=data,
     )
     if response.status_code == 201 or response.status_code == 200:
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Create Policy", time_taken)
+        pass
 
 
 def twin_device(device_id, definition):
     """ Create the DT"""
-    start_time = time.time()
     auth = ("ditto", "ditto")
     headers = {"Content-Type": "application/json"}
     data = {
@@ -354,14 +334,12 @@ def twin_device(device_id, definition):
         , json=data,
     )
     if response.status_code == 201 or response.status_code == 200:
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Create DT", time_taken)
+        pass
+        
 
 
 def untwin_device(device_id):
     """Untwin a device"""
-    start_time = time.time()
     auth = ("ditto", "ditto")
     response = requests.delete(
         f"http://localhost:8080/api/2/things/org.Iotp2c:{device_id}"
@@ -374,14 +352,10 @@ def untwin_device(device_id):
             , auth=auth
         )
         delete_connection(device_id)
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Untwin", time_taken)
 
 
 def create_connection(device_id):
     """Create the connection"""
-    start_time = time.time()
     # Create the connection to the device
     headers = {"Content-Type": "application/json"}
     mosquitto_ip = ""
@@ -449,14 +423,11 @@ def create_connection(device_id):
         json=data,
     )
     if response.status_code == 200:
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Create Connection", time_taken)
+        pass
 
 
 def delete_connection(device_id):
     """Delete the connection"""
-    start_time = time.time()
     headers = {"Content-Type": "application/json"}
     data = {
         "targetActorSelection": "/system/sharding/connection",
@@ -473,9 +444,7 @@ def delete_connection(device_id):
         json=data,
     )
     if response.status_code == 200:
-        end_time = time.time()
-        time_taken = end_time - start_time
-        write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Delete Connection", time_taken)
+        pass
 
 
 def check_dt_status(device_id):
