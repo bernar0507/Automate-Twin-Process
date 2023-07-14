@@ -18,13 +18,38 @@ def initiate_twinning_process(context, iterations):
         os.chdir("/home/ditto/project2/Automate-Twin-Process")
         device_id = "iwatch"
         definition = "https://raw.githubusercontent.com/bernar0507/Eclipse-Ditto-MQTT-iWatch/main/iwatch/wot/iwatch.tm.jsonld"
+        
+        start_time = time.time()
         twin_sd.start_ditto()
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Ditto start", end_time - start_time)
+        
+        start_time = time.time()
         twin_sd.start_mosquitto()
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Mosquitto start", end_time - start_time)
+        
+        start_time = time.time()
         twin_sd.run_sd(device_id)
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "start container smart device", end_time - start_time)
+        
+        start_time = time.time()
         twin_sd.twinning_process(device_id, definition)
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Create DT", end_time - start_time)
+        
+        start_time = time.time()
         twin_sd.check_dt_status(device_id)
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Check DT latest status", end_time - start_time)
+        
+        start_time = time.time()
         twin_sd.send_iwatch_data(device_id)
-        # Get a list of all running containers
+        end_time = time.time()
+        twin_sd.write_to_csv('/home/ditto/project2/Automate-Twin-Process/timing_data.csv', "Start sending data to DT", end_time - start_time)
+        
+        # Clear the environment for the next run
         subprocess.run(["docker", "rm", "-f", "mosquitto"], stdout=subprocess.PIPE, check=True)
         subprocess.run(["docker", "rm", "-f", "iwatch-container"], stdout=subprocess.PIPE, check=True)
         os.chdir("/home/ditto/project2/ditto/deployment/docker/")
