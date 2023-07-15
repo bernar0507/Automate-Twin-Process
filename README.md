@@ -58,3 +58,6 @@ The sd will start sending data automatically.
 # Check the Twin
 
 ```curl -u ditto:ditto -X GET 'http://localhost:8080/api/2/things/org.Iotp2c:iwatch'```
+
+# Tests
+The test are available in the test folder. 
