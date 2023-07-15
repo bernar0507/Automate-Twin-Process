@@ -63,7 +63,7 @@ def step_clean_environment(context):
 @when('I start the twinning process for {num_watches} iWatch')
 def step_start_twinning(context, num_watches):
     # Start the twinning process. Implementation will depend on your project's requirements.
-    os.chdir("/home/ditto/project2/Automate-Twin-Process")
+    os.chdir("/home/bagao/project2/Automate-Twin-Process")
     context.num_watches = int(num_watches)
     definition = "https://raw.githubusercontent.com/bernar0507/Eclipse-Ditto-MQTT-iWatch/main/iwatch/wot/iwatch.tm.jsonld"
     twin_sd.start_ditto()
@@ -88,14 +88,17 @@ def step_measure_performance(context, num_minutes):
     duration = int(num_minutes)
     interval = 1  # interval -> 1 minute
     device_id = "iwatch1"
-    csv_filename = "/home/ditto/project2/Automate-Twin-Process/performance.csv"
+    csv_filename = "/home/bagao/project2/Automate-Twin-Process/performance1.csv"
     context.performance_data = measure_performance(test_name, duration, interval, device_id, csv_filename)
 
     # Define your cleanup process
     num_watches = int(context.num_watches)
-    iwatch_containers_to_cleanup = [f"iwatch-container{i+1}" for i in range(num_watches)]
+    iwatch_containers_to_cleanup = [f"iwatch{i+1}-container" for i in range(num_watches)]
     docker_cleanup(iwatch_containers_to_cleanup)
 
     # Cleanup Ditto and Mosquitto containers
-    other_containers_to_cleanup = ["ditto", "mosquitto"]
+    other_containers_to_cleanup = ["mosquitto"]
     docker_cleanup(other_containers_to_cleanup)
+    
+    os.chdir("/home/bagao/project2/ditto/deployment/docker/")
+    subprocess.run(["docker-compose", "down"], stdout=subprocess.PIPE, check=True)
