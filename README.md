@@ -61,3 +61,34 @@ The sd will start sending data automatically.
 
 # Tests
 The test are available in the test folder. 
+
+Here are the test cases written in Gherkins:
+
+## performance_test_10_iwatch
+```
+Feature: Performance Testing of Eclipse Ditto for 10 iWatch
+
+  Scenario: Twinning and performance testing for ten iWatch
+    Given I have a clean environment
+    When I start the twinning process for 10 iWatch
+    Then I measure and record the performance for 30 minutes
+```
+
+## performance_test_1_iwatch
+```
+Feature: Performance Testing of Eclipse Ditto for 1 iWatch
+
+  Scenario: Twinning and performance testing for one iWatch
+    Given I have a clean environment
+    When I start the twinning process for 1 iWatch
+    Then I measure and record the performance for 30 minutes
+```
+## twin_test
+```
+Feature: Twinning Process Performance Testing in Eclipse Ditto
+
+  Scenario: Test twinning process and capture time for 100 iterations
+    Given I have a clean environment with Eclipse Ditto set up
+    When I initiate the twinning process for 100 iterations
+    Then I should have a CSV file with the time data of 100 iterations
+```
