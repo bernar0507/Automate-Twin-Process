@@ -219,7 +219,7 @@ def run_sd(device_id):
         "--name", 
         f"{device_id}-container", 
         "-v", 
-        "/home/ditto/project2/Eclipse-Ditto-MQTT-iwatch-SSL-TCP/mosquitto/:/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/",
+        "/home/bagao/project2/Eclipse-Ditto-MQTT-iwatch-SSL-TCP/mosquitto/:/app/Eclipse-Ditto-MQTT-iwatch-SSL-OOP/mosquitto/",
         "--network", 
         "docker_default", 
         f"{base_device_name}_image"
