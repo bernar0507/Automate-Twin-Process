@@ -7,7 +7,7 @@ Automation of the twinning process in Eclipse Ditto
 
 2. Pull Mosquitto: ```docker pull eclipse-mosquitto```
 
-3. Clone Eclipse-Ditto-MQTT-iWatch: ```git clone https://github.com/bernar0507/Eclipse-Ditto-MQTT-iWatch.git```
+3. Clone Eclipse-Ditto-MQTT-iwatch-SSL-TCP: ```git clone https://github.com/bernar0507/Eclipse-Ditto-MQTT-iwatch-SSL-TCP.git```
 
 4. Clone Automate-Twin-Process: ```git clone https://github.com/bernar0507/Automate-Twin-Process.git```
 
